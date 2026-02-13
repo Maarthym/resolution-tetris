@@ -24,36 +24,15 @@ slotSize = boardWidth//C
 slotBorder = slotSize // 7
 
 xBoard = (WIDTH - boardWidth)//2
-yBoard = (HEIGHT - boardHeight)//2
-
-
-class Tetris:
-    """
-    On définit le Tetris comme une matrice qui se fera actualiser au fil du temps.
-    Les cases 0 sont vides.
-    Pour n non nul, si self.board[i][j] = n, alors la case est pleine et est de couleur COLOR[n].
-    """
-    def __init__(self, width, length, level):
-        self.width = width
-        self.length = length
-        self.level = level
-        self.board = [[0]*width for i in range(length)] #matrice de taille L*C qui caractérise le plateau de jeu
-        self.playing = None #pièce qu'on joue
-        self.score = 0
-
-
+yBoard = (HEIGHT - boardHeight)//2 + 10
 
 pygame.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-game = Tetris(C, L, LEVEL)
-pygame.display.set_caption("Tetris")
+font = pygame.font.Font(None, 36)
 
-pygame.mixer.music.load(MUSIC)
-pygame.mixer.music.play(loops=-1)
 
-clock = pygame.time.Clock()
-
-def drawSlot(screen, x, y, color):
+def drawSlot(screen, i, j, color):
+    x = xBoard + i * slotSize
+    y = yBoard + j * slotSize
     pygame.draw.rect(screen, color, (x,y,slotSize,slotSize))
     (r,g,b) = color
     contrast = 65
@@ -69,6 +48,43 @@ def drawSlot(screen, x, y, color):
     pygame.draw.rect(screen, colorb, (x+slotSize-slotBorder,y,slotBorder,slotSize))
     pygame.draw.rect(screen, colorb, (x,y+slotSize-slotBorder,slotSize,slotBorder))
 
+def drawText(screen, x,y,t,c=(255,255,255)):
+    text = font.render(t, True, c)
+    screen.blit(text, (x, y))
+def drawTextXCentered(screen, x,y,t,c=(255,255,255)):
+    text = font.render(t, True, c)
+    l,h = text.get_size()
+    screen.blit(text, (x-l//2, y))
+
+class Tetris:
+    """
+    On définit le Tetris comme une matrice qui se fera actualiser au fil du temps.
+    Les cases 0 sont vides.
+    Pour n non nul, si self.board[i][j] = n, alors la case est pleine et est de couleur COLOR[n].
+    """
+    def __init__(self, width, length, level, screen):
+        self.width = width
+        self.length = length
+        self.level = level
+        self.board = [[0]*width for i in range(length)] #matrice de taille L*C qui caractérise le plateau de jeu
+        self.playing = None #pièce qu'on joue
+        self.score = 0
+        self.screen = screen
+
+    def update(self):
+        drawTextXCentered(self.screen, WIDTH//2, 10, f"Score : {self.score}")
+
+
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+game = Tetris(C, L, LEVEL, screen)
+pygame.display.set_caption("Tetris")
+
+pygame.mixer.music.load(MUSIC)
+pygame.mixer.music.play(loops=-1)
+
+clock = pygame.time.Clock()
+
+
 
 def gameUpdate(screen, game):
     """
@@ -78,7 +94,7 @@ def gameUpdate(screen, game):
     # à compléter
     #Puis on dessine la matrice
     pygame.draw.rect(screen, colorGrid, (xBoard,yBoard,boardWidth,boardHeight))
-    drawSlot(screen,0,0,(255,0,0))
+    game.update()
 
 def bgChange(k):
     if k < maxk:
