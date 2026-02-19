@@ -4,6 +4,8 @@ import sys
 import random
 import math
 
+pygame.init()
+
 #COULEURS
 blueBG = 80
 maxk = 6
@@ -11,8 +13,11 @@ blueBGdir = 1 # pour le retour inverse du bleu vers sa valeur initiale
 colorText = (255,255,255)
 colorGrid = (20,20,30)
 
-WIDTH = 450
-HEIGHT = 600
+info = pygame.display.Info()
+maxw = info.current_w
+maxh = info.current_h
+WIDTH = math.floor(0.25*maxw)
+HEIGHT = 600/450*WIDTH
 FPS = 60
 MUSIC = "music.mp3"
 
@@ -54,11 +59,16 @@ TYPE = [[
 
 solG = [0.00196302, 1.60274096, 0.02719349] #résultats du script visu_vitesse cherchant à trouver une fonction qui rend compte de la vitesse des tetrominoes
 
+devmode = True
+
 def gravity(level):
     """
     1G correspond à un carré qui descend PAR image
     """
-    return solG[0]*(solG[1])**level + solG[2]
+    add = 0
+    if devmode:
+        add = 0.75
+    return solG[0]*(solG[1])**level + solG[2] + add
 
 def T(level):
     """
@@ -77,7 +87,6 @@ slotBorder = slotSize // 7
 xBoard = (WIDTH - boardWidth)//2
 yBoard = (HEIGHT - boardHeight)//2 + 10
 
-pygame.init()
 font = pygame.font.Font(None, 36)
 
 def drawSlot(screen, posx, posy, color):
@@ -122,7 +131,7 @@ class Tetromino:
         """
         Vérifie au préalable si le mouvement peut-être fait.
         """
-        board = self.game.board.copy()
+        board = [[self.game.board[i][j] for j in range(self.game.lines)] for i in range(self.game.columns)]
         for dx in range(len(self.type)):
             for dy in range(len(self.type[dx])):
                 if self.type[dx][dy] == 1:
@@ -134,10 +143,11 @@ class Tetromino:
         yp = self.y + my
         for dx in range(len(self.type)):
             for dy in range(len(self.type[dx])):
-                if xp+dx >= self.game.columns or yp+dy >= self.game.lines:
-                    return False
-                elif board[xp+dx][yp+dy] != -1:
-                    return False
+                if self.type[dx][dy] == 1:
+                    if xp+dx >= self.game.columns or yp+dy >= self.game.lines:
+                        return False
+                    elif board[xp+dx][yp+dy] != -1:
+                        return False
         return True
 
     def move(self, mx, my):
@@ -197,15 +207,19 @@ class Tetris:
         tetro = None
         kpossibles = []
         for k in range(self.columns):
-            tetro = Tetromino(self, tetroType, col, k, 0)
-            if tetro.testmove(0,0):
+            test = True
+            for dx in range(len(tetroType)):
+                for dy in range(len(tetroType[dx])):
+                    if k+dx >= self.columns or self.board[k+dx][dy] != -1:
+                        test = False
+            if test:
                 kpossibles.append(k)
         if kpossibles == []:
             self.ongoing = False
             self.playing = None
         else:
-            print(kpossibles)
             k = random.choice(kpossibles)
+            print(kpossibles)
             tetro = Tetromino(self, tetroType, col, k, 0)
             self.playing = tetro
 
@@ -242,7 +256,7 @@ class Tetris:
                         else:
                             drawSlot(screen, x, y, (80,80,80))
         else:
-            drawTextXCentered(self.screen, WIDTH//2, 30, f"You Lost")
+            drawTextXCentered(self.screen, WIDTH//2, HEIGHT//2, f"You Lost")
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 game = Tetris(C, L, LEVEL, screen)
