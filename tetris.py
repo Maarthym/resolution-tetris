@@ -128,7 +128,7 @@ class Tetromino:
         self.x = x
         self.y = y
         self.game = game
-        self.type = type # matrice avec des 1 pour les pièces occupées et des 0 pour les pièces non-occupées
+        self.type = [[type[i][j] for j in range(len(type))] for i in range(len(type))] # matrice avec des 1 pour les pièces occupées et des 0 pour les pièces non-occupées
         self.color = color
         self.isPlaying = True
 
@@ -210,6 +210,7 @@ class Tetromino:
             self.down()
         elif self.isPlaying: #s'il était en jeu, alors on fait apparaître un nouveau tetromino
             self.isPlaying = False
+            self.game.evaluate()
             self.game.spawn()
         self.move(0,0) #ceci va simplement ajouter la pièce telle qu'elle est dans la matrice
 
@@ -224,6 +225,7 @@ class Tetris:
         self.lines = height
         self.columns = width
         self.setLevel(level)
+        self.tetros = []
         self.board = [[-1]*self.lines for i in range(self.columns)] #matrice de taille C*L qui caractérise le plateau de jeu (colonnes x lignes et pas l'inverse (pour visualiser (O,x,y) en base directe))
         self.playing = None #pièce qu'on joue
         self.score = 0
@@ -272,8 +274,32 @@ class Tetris:
         else:
             k = random.choice(kpossibles)
             tetro = Tetromino(self, tetroType, col, k, l)
+            self.tetros.append(tetro)
             self.playing = tetro
 
+    def evaluate(self):
+        amount = 0
+        todel = []
+        for j in range(self.lines):
+            test = True
+            for i in range(self.columns):
+                if self.board[i][j] == -1:
+                    test = False
+            if test:
+                amount += 1
+                todel.append(j)
+                for i in range(self.columns):
+                    self.board[i][j] = -1
+        for tetro in self.tetros:
+            n = len(tetro.type)
+            c = (n-1)//2
+            for dx in range(n):
+                for dy in range(n):
+                    if tetro.type[dx][dy] == 1:
+                        if tetro.y + dy + c in todel:
+                            tetro.type[dx][dy] = 0
+            tetro.update()
+        self.score += 200*amount  #score simplifié
 
     def setLevel(self, level):
         self.level = level
