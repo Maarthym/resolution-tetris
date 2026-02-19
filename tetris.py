@@ -26,35 +26,40 @@ C = 10 # nombre de colonnes (à priori on ne changera pas ce nombre)
 LEVEL = 1 # difficulté
 COLOR = [(random.randint(100,255), random.randint(100,255),random.randint(100,255)) for _ in range(15)] #couleurs des pièces
 
-TYPE = [[
-    [1,1],
-    [0,1],
-    [0,1]
-    ],[
-    [0,1],
-    [0,1],
-    [1,1]
-    ],[
-    [1],
-    [1],
-    [1],
-    [1]
-    ],[
-    [1,0],
-    [1,1],
-    [0,1]
-    ],[
-    [0,1],
-    [1,1],
-    [1,0]
-    ],[
-    [1,1],
-    [1,1],
-    ],[
-    [1,0],
-    [1,1],
-    [1,0]
-    ]
+
+lgn = [[0,0,0,0,0],[0,0,0,0,0], [0,1,1,1,1],[0,0,0,0,0],[0,0,0,0,0]]
+l1 = [[0,0,1],[1,1,1], [0,0,0]]
+l2 = [[1,0,0],[1,1,1], [0,0,0]]
+car = [[0,1,1],[0,1,1], [0,0,0]]
+z1 = [[1,1,0],[0,1,1], [0,0,0]]
+z2 = [[0,1,1],[1,1,0], [0,0,0]]
+t = [[0,1,0],[1,1,1], [0,0,0]]
+
+def printmat(m):
+    print("")
+    for line in m:
+        print(line)
+    print("")
+
+def transpose(mat):
+    return [[mat[j][i] for j in range(len(mat))] for i in range(len(mat))]
+
+def rotation(mat):
+    """
+    à un couple (i,j) de coordonnées dans une matrice carrée de taille impaire, on effectue la rotation centrée en c =(n-1)/2
+    alors (i',j') = (c,c) + R_{pi/2}((i-c,j-c)) = (c,c) + (j-c, c-i)
+    """
+    n = len(mat)#supposée carrée de taille impaire
+    c = (n-1)//2
+    res = [[0]*n for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            if mat[i][j] == 1:
+                res[j][2*c-i] = 1
+    return res
+
+TYPE = [
+    transpose(lgn), transpose(l1), transpose(l2), transpose(car), transpose(z1), transpose(z2), transpose(t)
 ]
 
 solG = [0.00196302, 1.60274096, 0.02719349] #résultats du script visu_vitesse cherchant à trouver une fonction qui rend compte de la vitesse des tetrominoes
@@ -131,14 +136,18 @@ class Tetromino:
         """
         Vérifie au préalable si le mouvement peut-être fait.
         """
+        c = (len(self.type)-1)//2
         board = [[self.game.board[i][j] for j in range(self.game.lines)] for i in range(self.game.columns)]
         for dx in range(len(self.type)):
             for dy in range(len(self.type[dx])):
                 if self.type[dx][dy] == 1:
-                    if self.x + mx + dx < 0 or self.x + mx + dx >= game.columns or self.y + my + dy < 0 or self.y + my + dy >= game.lines:
+                    c = (len(self.type)-1)//2
+                    x_boardDiff = dx + c # différence sur le plateau : on centre en c où c = milieu de la pièce dans sa matrice
+                    y_boardDiff = dy + c
+                    if self.x + mx + x_boardDiff < 0 or self.x + mx + x_boardDiff >= game.columns or self.y + my + y_boardDiff < 0 or self.y + my + y_boardDiff >= game.lines:
                         return False
                     try:
-                        board[self.x+dx][self.y+dy] = -1
+                        board[self.x+x_boardDiff][self.y+y_boardDiff] = -1
                     except:
                         return False
         xp = self.x + mx
@@ -146,26 +155,52 @@ class Tetromino:
         for dx in range(len(self.type)):
             for dy in range(len(self.type[dx])):
                 if self.type[dx][dy] == 1:
-                    if xp+dx >= self.game.columns or yp+dy >= self.game.lines:
-                        return False
-                    elif board[xp+dx][yp+dy] != -1:
+                    if board[xp+dx+c][yp+dy+c] != -1: # on centre en (c,c) dans la matrice du tetromino
                         return False
         return True
 
     def move(self, mx, my):
+        c = (len(self.type)-1)//2
         for dx in range(len(self.type)):
             for dy in range(len(self.type[dx])):
                 if self.type[dx][dy] == 1:
-                    self.game.board[self.x+dx][self.y+dy] = -1
+                    self.game.board[self.x+dx+c][self.y+dy+c] = -1
         self.x += mx
         self.y += my
         for dx in range(len(self.type)):
             for dy in range(len(self.type[dx])):
                 if self.type[dx][dy] == 1:
-                    self.game.board[self.x+dx][self.y+dy] = self.color
+                    self.game.board[self.x+dx+c][self.y+dy+c] = self.color
+
+    def testrotate(self):
+        newtype = rotation(self.type)
+        c = (len(self.type) - 1)//2
+        board = [[self.game.board[i][j] for j in range(self.game.lines)] for i in range(self.game.columns)]
+        for dx in range(len(self.type)):
+            for dy in range(len(self.type)):
+                if self.type[dx][dy] == 1:
+                    if self.x + dx+c < 0 or self.x + dx+c >= game.columns or self.y + dy+c < 0 or self.y + dy+c >= game.lines:
+                        return False
+                    else:
+                        board[self.x+dx+c][self.y+dy+c] = -1
+        for dx in range(len(newtype)):
+            for dy in range(len(newtype)):
+                if newtype[dx][dy] == 1:
+                    if self.x + dx+c < 0 or self.x + dx+c >= game.columns or self.y + dy+c < 0 or self.y + dy+c >= game.lines:
+                        return False
+                    elif board[self.x + dx+c][self.y + dy+c] != -1:
+                        return False
+        return True
 
     def rotate(self):
-        pass
+        newtype = rotation(self.type)
+        c = (len(self.type) - 1)//2
+        for dx in range(len(self.type)):
+            for dy in range(len(self.type)):
+                if self.type[dx][dy] == 1:
+                    self.game.board[self.x+dx+c][self.y+dy+c] = -1
+        self.type = newtype
+        self.move(0,0)
 
     def down(self):
         self.move(0,1) # il tombe
@@ -209,21 +244,34 @@ class Tetris:
         col = random.randint(0,nc-1) # on modélise la couleur par un entier qui est son indice dans le tableau COLOR
         tetro = None
         kpossibles = []
+        l = 0
+        if tetroType == TYPE[0]:
+            l = -2 #(ligne) qui est de hauteur 2 dès le départ
         for k in range(self.columns):
             test = True
             for dx in range(len(tetroType)):
                 for dy in range(len(tetroType[dx])):
-                    if k+dx >= self.columns or self.board[k+dx][dy] != -1:
-                        test = False
+                    if tetroType[dx][dy] == 1:
+                        c = (len(tetroType)-1)//2
+                        if k+dx+c >= self.columns:
+                            test = False
+                        elif k+dx+c < 0:
+                            test = False
+                        elif l+dy+c < 0:
+                            test = False
+                        elif l+dy+c >= self.lines:
+                            test = False
+                        elif self.board[k+dx+c][l+dy+c] != -1:
+                            test = False
             if test:
                 kpossibles.append(k)
         if kpossibles == []:
+            print("fin")
             self.ongoing = False
             self.playing = None
         else:
             k = random.choice(kpossibles)
-            print(kpossibles)
-            tetro = Tetromino(self, tetroType, col, k, 0)
+            tetro = Tetromino(self, tetroType, col, k, l)
             self.playing = tetro
 
 
@@ -241,23 +289,17 @@ class Tetris:
         for event in self.events:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
-                    print("left")
                     if self.playing.testmove(-1,0):
                         self.playing.move(-1,0)
                 if event.key == pygame.K_RIGHT:
-                    print("right")
                     if self.playing.testmove(1,0):
                         self.playing.move(1,0)
                 if event.key == pygame.K_DOWN:
-                    print("down")
                     if self.playing.testmove(0,1):
                         self.playing.move(0,1)
                 if event.key == pygame.K_UP:
-                    print("rotate")
-                    pass #rotations
-            if event.type == pygame.KEYUP:
-                print("no key is being pressed")
-
+                    if self.playing.testrotate():
+                        self.playing.rotate()
 
     def randomizeNext(self):
         l = TYPE.copy()
