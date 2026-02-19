@@ -19,10 +19,37 @@ MUSIC = "music.mp3"
 L = 20 # nombre de lignes
 C = 10 # nombre de colonnes (à priori on ne changera pas ce nombre)
 LEVEL = 1 # difficulté
-COLOR = [(255,0,0),(0,255,0),(0,0,255)] #couleurs des pièces
+COLOR = [(random.randint(100,255), random.randint(100,255),random.randint(100,255)) for _ in range(15)] #couleurs des pièces
 
-TYPE = [
-    [[1],[1],[1],[1]] #ligne
+TYPE = [[
+    [1,1],
+    [0,1],
+    [0,1]
+    ],[
+    [0,1],
+    [0,1],
+    [1,1]
+    ],[
+    [1],
+    [1],
+    [1],
+    [1]
+    ],[
+    [1,0],
+    [1,1],
+    [0,1]
+    ],[
+    [0,1],
+    [1,1],
+    [1,0]
+    ],[
+    [1,1],
+    [1,1],
+    ],[
+    [1,0],
+    [1,1],
+    [1,0]
+    ]
 ]
 
 solG = [0.00196302, 1.60274096, 0.02719349] #résultats du script visu_vitesse cherchant à trouver une fonction qui rend compte de la vitesse des tetrominoes
@@ -97,6 +124,10 @@ class Tetromino:
         Vérifie au préalable si le mouvement peut-être fait.
         """
         board = self.game.board.copy()
+        for dx in range(len(self.type)):
+            for dy in range(len(self.type[dx])):
+                if self.type[dx][dy] == 1:
+                    board[self.x+dx][self.y+dy] = -1
         xp = self.x + mx
         yp = self.y + my
         for dx in range(len(self.type)):
@@ -157,9 +188,9 @@ class Tetris:
             self.playing.update()
         tetroType = self.next.pop()
         if self.next == []:
-            self.randomizeNext()
+            self.next =self.randomizeNext()
         nc = len(COLOR)
-        col = random.randint(0,nc) # on modélise la couleur par un entier qui est son indice dans le tableau COLOR
+        col = random.randint(0,nc-1) # on modélise la couleur par un entier qui est son indice dans le tableau COLOR
         self.playing = Tetromino(self, tetroType, col, C//2, 0)
 
     def setLevel(self, level):
