@@ -378,14 +378,31 @@ def bgChange(k):
     if blueBG == 80:
         blueBGdir = 1
 
+class Automaton:
+    """
+    Algorithme qui s'occupe de jouer et tenter de maximiser le score
+    """
+    def __init__(self, game):
+        self.game = game
+        self.clock = 0
+
+    def update(self):
+        self.clock += 1
+        if self.clock == 60:
+            self.clock = 0
+            self.game.handle(random.choice(["left", "right", "rotate","down"]))
+
+
 running = True
+autoplay = True
+automaton = Automaton(game)
 k = 0
 while running:
     events = pygame.event.get()
     for event in events:
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pygame.KEYDOWN:
+        if event.type == pygame.KEYDOWN and autoplay == False: #ne fonctionne que si l'humain joue
             if event.key == pygame.K_LEFT:
                 game.handle("left")
             if event.key == pygame.K_RIGHT:
@@ -399,9 +416,9 @@ while running:
     if k == maxk:
         k = 0
     screen.fill((45,45,blueBG))
-
     gameUpdate(screen, game)
-
+    if autoplay and game.ongoing:
+        automaton.update()
     pygame.display.flip()
     clock.tick(FPS)
 
