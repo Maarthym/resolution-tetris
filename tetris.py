@@ -117,7 +117,6 @@ class Tetromino:
         self.type = type # matrice avec des 1 pour les pièces occupées et des 0 pour les pièces non-occupées
         self.color = color
         self.isPlaying = True
-        self.update()
 
     def testmove(self, mx, my):
         """
@@ -127,7 +126,10 @@ class Tetromino:
         for dx in range(len(self.type)):
             for dy in range(len(self.type[dx])):
                 if self.type[dx][dy] == 1:
-                    board[self.x+dx][self.y+dy] = -1
+                    try:
+                        board[self.x+dx][self.y+dy] = -1
+                    except:
+                        return False
         xp = self.x + mx
         yp = self.y + my
         for dx in range(len(self.type)):
@@ -182,6 +184,7 @@ class Tetris:
         self.frameclock = 0
         self.next = self.randomizeNext()
         self.spawn()
+        self.ongoing = True
 
     def spawn(self):
         if self.playing != None:
@@ -191,7 +194,21 @@ class Tetris:
             self.next =self.randomizeNext()
         nc = len(COLOR)
         col = random.randint(0,nc-1) # on modélise la couleur par un entier qui est son indice dans le tableau COLOR
-        self.playing = Tetromino(self, tetroType, col, C//2, 0)
+        tetro = None
+        kpossibles = []
+        for k in range(self.columns):
+            tetro = Tetromino(self, tetroType, col, k, 0)
+            if tetro.testmove(0,0):
+                kpossibles.append(k)
+        if kpossibles == []:
+            self.ongoing = False
+            self.playing = None
+        else:
+            print(kpossibles)
+            k = random.choice(kpossibles)
+            tetro = Tetromino(self, tetroType, col, k, 0)
+            self.playing = tetro
+
 
     def setLevel(self, level):
         self.level = level
@@ -211,18 +228,21 @@ class Tetris:
 
     def update(self):
         drawTextXCentered(self.screen, WIDTH//2, 10, f"Score : {self.score}")
-        self.incrClock()
-        drawText(self.screen, 10, HEIGHT - 40, f"Lv.{self.level}")
-        for x in range(self.columns):
-            for y in range(self.lines):
-                p = self.board[x][y]
-                if p >= 0:
-                    drawSlot(screen, x, y, COLOR[p])
-                else:
-                    if (x+y) % 2 == 0:
-                        drawSlot(screen, x, y, (88,88,88))
+        if self.ongoing:
+            self.incrClock()
+            drawText(self.screen, 10, HEIGHT - 40, f"Lv.{self.level}")
+            for x in range(self.columns):
+                for y in range(self.lines):
+                    p = self.board[x][y]
+                    if p >= 0:
+                        drawSlot(screen, x, y, COLOR[p])
                     else:
-                        drawSlot(screen, x, y, (80,80,80))
+                        if (x+y) % 2 == 0:
+                            drawSlot(screen, x, y, (88,88,88))
+                        else:
+                            drawSlot(screen, x, y, (80,80,80))
+        else:
+            drawTextXCentered(self.screen, WIDTH//2, 30, f"You Lost")
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 game = Tetris(C, L, LEVEL, screen)
