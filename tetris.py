@@ -115,6 +115,7 @@ def drawSlot(screen, posx, posy, color):
 def drawText(screen, x,y,t,c=(255,255,255)):
     text = font.render(t, True, c)
     screen.blit(text, (x, y))
+
 def drawTextXCentered(screen, x,y,t,c=(255,255,255)):
     text = font.render(t, True, c)
     l,h = text.get_size()
@@ -173,6 +174,9 @@ class Tetromino:
                     self.game.board[self.x+dx+c][self.y+dy+c] = self.color
 
     def testrotate(self):
+        """
+        Fonction de vérification pour s'assurer de pouvoir effectuer Tetromino.rotate()
+        """
         newtype = rotation(self.type)
         c = (len(self.type) - 1)//2
         board = [[self.game.board[i][j] for j in range(self.game.lines)] for i in range(self.game.columns)]
@@ -236,6 +240,9 @@ class Tetris:
         self.ongoing = True
 
     def spawn(self):
+        """
+        Apparition d'un tetromino
+        """
         if self.playing != None:
             self.playing.update()
         tetroType = self.next.pop()
@@ -266,17 +273,20 @@ class Tetris:
                             test = False
             if test:
                 kpossibles.append(k)
-        if kpossibles == []:
+        if kpossibles == []: #impossible de faire apparaître le tetromino
             print("fin")
             self.ongoing = False
             self.playing = None
         else:
-            k = random.choice(kpossibles)
+            k = random.choice(kpossibles) #apparition sur une abscisse aléatoire
             tetro = Tetromino(self, tetroType, col, k, l)
             self.tetros.append(tetro)
             self.playing = tetro
 
     def evaluate(self):
+        """
+        Évaluation des lignes du jeu pour savoir si l'une ou plusieurs ont été remplies.
+        """
         amount = 0
         todel = []
         for j in range(self.lines):
@@ -306,11 +316,14 @@ class Tetris:
 
     def incrClock(self):
         self.frameclock += 1
-        if self.frameclock == self.T:
+        if self.frameclock == self.T: # self.T est le temps entre chaque chute d'un pixel d'un tetromino
             self.frameclock = 0
             self.playing.update()
 
     def handle(self, event):
+        """
+        Gestion des évènements, entrées du joueur/de l'automate
+        """
         if event == "left":
             if self.playing.testmove(-1,0):
                 self.playing.move(-1,0)
@@ -330,6 +343,9 @@ class Tetris:
         return l
 
     def update(self):
+        """
+        Mise à jour calculée à chaque image
+        """
         drawTextXCentered(self.screen, WIDTH//2, 10, f"Score : {self.score}")
         if self.ongoing:
             self.incrClock()
