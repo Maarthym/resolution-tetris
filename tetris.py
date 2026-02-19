@@ -67,7 +67,7 @@ def gravity(level):
     """
     add = 0
     if devmode:
-        add = 0.75
+        add = 0
     return solG[0]*(solG[1])**level + solG[2] + add
 
 def T(level):
@@ -135,6 +135,8 @@ class Tetromino:
         for dx in range(len(self.type)):
             for dy in range(len(self.type[dx])):
                 if self.type[dx][dy] == 1:
+                    if self.x + mx + dx < 0 or self.x + mx + dx >= game.columns or self.y + my + dy < 0 or self.y + my + dy >= game.lines:
+                        return False
                     try:
                         board[self.x+dx][self.y+dy] = -1
                     except:
@@ -195,6 +197,7 @@ class Tetris:
         self.next = self.randomizeNext()
         self.spawn()
         self.ongoing = True
+        self.events = []
 
     def spawn(self):
         if self.playing != None:
@@ -234,6 +237,27 @@ class Tetris:
             self.frameclock = 0
             self.playing.update()
 
+    def detectInputs(self):
+        for event in self.events:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    print("left")
+                    if self.playing.testmove(-1,0):
+                        self.playing.move(-1,0)
+                if event.key == pygame.K_RIGHT:
+                    print("right")
+                    if self.playing.testmove(1,0):
+                        self.playing.move(1,0)
+                if event.key == pygame.K_DOWN:
+                    print("down")
+                    if self.playing.testmove(0,1):
+                        self.playing.move(0,1)
+                if event.key == pygame.K_UP:
+                    print("rotate")
+                    pass #rotations
+            if event.type == pygame.KEYUP:
+                print("no key is being pressed")
+
 
     def randomizeNext(self):
         l = TYPE.copy()
@@ -244,6 +268,7 @@ class Tetris:
         drawTextXCentered(self.screen, WIDTH//2, 10, f"Score : {self.score}")
         if self.ongoing:
             self.incrClock()
+            self.detectInputs()
             drawText(self.screen, 10, HEIGHT - 40, f"Lv.{self.level}")
             for x in range(self.columns):
                 for y in range(self.lines):
@@ -292,7 +317,9 @@ def bgChange(k):
 running = True
 k = 0
 while running:
-    for event in pygame.event.get():
+    events = pygame.event.get()
+    game.events = events
+    for event in events:
         if event.type == pygame.QUIT:
             running = False
     k += 1
