@@ -22,7 +22,7 @@ LEVEL = 1 # difficulté
 COLOR = [(255,0,0),(0,255,0),(0,0,255)] #couleurs des pièces
 
 TYPE = [
-    [[1,1,1,1]]
+    [[1],[1],[1],[1]] #ligne
 ]
 
 solG = [0.00196302, 1.60274096, 0.02719349] #résultats du script visu_vitesse cherchant à trouver une fonction qui rend compte de la vitesse des tetrominoes
@@ -53,9 +53,9 @@ yBoard = (HEIGHT - boardHeight)//2 + 10
 pygame.init()
 font = pygame.font.Font(None, 36)
 
-def drawSlot(screen, i, j, color):
-    x = xBoard + i * slotSize
-    y = yBoard + j * slotSize
+def drawSlot(screen, posx, posy, color):
+    x = xBoard + posx * slotSize # j -> column -> x-axis
+    y = yBoard + posy * slotSize # i -> line -> y-axis
     pygame.draw.rect(screen, color, (x,y,slotSize,slotSize))
     (r,g,b) = color
     contrast = 65
@@ -83,39 +83,54 @@ class Tetromino:
     """
     Un Tetromino est une pièce du jeu. Ici on les défini en tant qu'objet de par leur complexité : on va les bouger, les figer, les colorer, leur donner une forme parmi 7 disponibles (TYPE)...
     """
-    def __init__(self, game, type, color, i, j):
-        self.i = i
-        self.j = j
+    def __init__(self, game, type, color, x, y):
+        self.x = x
+        self.y = y
         self.game = game
         self.type = type # matrice avec des 1 pour les pièces occupées et des 0 pour les pièces non-occupées
         self.color = color
+        self.isPlaying = True
         self.update()
 
-    def testmove(self, mi, mj):
+    def testmove(self, mx, my):
         """
-        Vérifie au préalable si le mouvement peut-être fait
+        Vérifie au préalable si le mouvement peut-être fait.
         """
-        pass
+        board = self.game.board.copy()
+        xp = self.x + mx
+        yp = self.y + my
+        for dx in range(len(self.type)):
+            for dy in range(len(self.type[dx])):
+                if xp+dx >= self.game.columns or yp+dy >= self.game.lines:
+                    return False
+                elif board[xp+dx][yp+dy] != -1:
+                    return False
+        return True
 
-    def move(self, mi, mj):
-        for k in range(len(self.type)):
-            for l in range(len(self.type[k])):
-                if self.type[k][l] == 1:
-                    self.game.board[self.i+k][self.j + l] = 0
-        self.i = self.i + mi
-        self.j = self.j + mj
-        for k in range(len(self.type)):
-            for l in range(len(self.type[k])):
-                if self.type[k][l] == 1:
-                    self.game.board[self.i+k][self.j + l] = 0
+    def move(self, mx, my):
+        for dx in range(len(self.type)):
+            for dy in range(len(self.type[dx])):
+                if self.type[dx][dy] == 1:
+                    self.game.board[self.x+dx][self.y+dy] = -1
+        self.x += mx
+        self.y += my
+        for dx in range(len(self.type)):
+            for dy in range(len(self.type[dx])):
+                if self.type[dx][dy] == 1:
+                    self.game.board[self.x+dx][self.y+dy] = self.color
 
     def rotate(self):
         pass
 
     def down(self):
-        self.move(0,-1) # il tombe
+        self.move(0,1) # il tombe
 
     def update(self):
+        if self.testmove(0,1): #gravité
+            self.down()
+        elif self.isPlaying: #s'il était en jeu, alors on fait apparaître un nouveau tetromino
+            self.isPlaying = False
+            self.game.spawn()
         self.move(0,0) #ceci va simplement ajouter la pièce telle qu'elle est dans la matrice
 
 
@@ -123,13 +138,13 @@ class Tetris:
     """
     On définit le Tetris comme une matrice qui se fera actualiser au fil du temps.
     Les cases 0 sont vides.
-    Pour n non nul, si self.board[i][j] = n, alors la case est pleine et est de couleur COLOR[n].
+    Pour n non nul, si self.board[x][y] = n, alors la case est pleine et est de couleur COLOR[n].
     """
-    def __init__(self, width, length, level, screen):
-        self.width = width
-        self.length = length
+    def __init__(self, width, height, level, screen):
+        self.lines = height
+        self.columns = width
         self.setLevel(level)
-        self.board = [[-1]*width for i in range(length)] #matrice de taille L*C qui caractérise le plateau de jeu
+        self.board = [[-1]*self.lines for i in range(self.columns)] #matrice de taille C*L qui caractérise le plateau de jeu (colonnes x lignes et pas l'inverse (pour visualiser (O,x,y) en base directe))
         self.playing = None #pièce qu'on joue
         self.score = 0
         self.screen = screen
@@ -141,6 +156,8 @@ class Tetris:
         if self.playing != None:
             self.playing.update()
         tetroType = self.next.pop()
+        if self.next == []:
+            self.randomizeNext()
         nc = len(COLOR)
         col = random.randint(0,nc) # on modélise la couleur par un entier qui est son indice dans le tableau COLOR
         self.playing = Tetromino(self, tetroType, col, C//2, 0)
@@ -153,7 +170,7 @@ class Tetris:
         self.frameclock += 1
         if self.frameclock == self.T:
             self.frameclock = 0
-            self.playing.down()
+            self.playing.update()
 
 
     def randomizeNext(self):
@@ -165,19 +182,23 @@ class Tetris:
         drawTextXCentered(self.screen, WIDTH//2, 10, f"Score : {self.score}")
         self.incrClock()
         drawText(self.screen, 10, HEIGHT - 40, f"Lv.{self.level}")
-        for i in range(L):
-            for j in range(C):
-                p = self.board[i][j]
+        for x in range(self.columns):
+            for y in range(self.lines):
+                p = self.board[x][y]
                 if p >= 0:
-                    drawSlot(screen, i, j, COLOR[p])
-
+                    drawSlot(screen, x, y, COLOR[p])
+                else:
+                    if (x+y) % 2 == 0:
+                        drawSlot(screen, x, y, (88,88,88))
+                    else:
+                        drawSlot(screen, x, y, (80,80,80))
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 game = Tetris(C, L, LEVEL, screen)
 pygame.display.set_caption("Tetris")
 
-pygame.mixer.music.load(MUSIC)
-pygame.mixer.music.play(loops=-1)
+#pygame.mixer.music.load(MUSIC)
+#pygame.mixer.music.play(loops=-1)
 
 clock = pygame.time.Clock()
 
