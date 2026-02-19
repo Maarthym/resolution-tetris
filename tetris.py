@@ -234,7 +234,6 @@ class Tetris:
         self.next = self.randomizeNext()
         self.spawn()
         self.ongoing = True
-        self.events = []
 
     def spawn(self):
         if self.playing != None:
@@ -311,21 +310,19 @@ class Tetris:
             self.frameclock = 0
             self.playing.update()
 
-    def detectInputs(self):
-        for event in self.events:
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    if self.playing.testmove(-1,0):
-                        self.playing.move(-1,0)
-                if event.key == pygame.K_RIGHT:
-                    if self.playing.testmove(1,0):
-                        self.playing.move(1,0)
-                if event.key == pygame.K_DOWN:
-                    if self.playing.testmove(0,1):
-                        self.playing.move(0,1)
-                if event.key == pygame.K_UP:
-                    if self.playing.testrotate():
-                        self.playing.rotate()
+    def handle(self, event):
+        if event == "left":
+            if self.playing.testmove(-1,0):
+                self.playing.move(-1,0)
+        if event == "right":
+            if self.playing.testmove(1,0):
+                self.playing.move(1,0)
+        if event == "down":
+            if self.playing.testmove(0,1):
+                self.playing.move(0,1)
+        if event == "rotate":
+            if self.playing.testrotate():
+                self.playing.rotate()
 
     def randomizeNext(self):
         l = TYPE.copy()
@@ -336,7 +333,6 @@ class Tetris:
         drawTextXCentered(self.screen, WIDTH//2, 10, f"Score : {self.score}")
         if self.ongoing:
             self.incrClock()
-            self.detectInputs()
             drawText(self.screen, 10, HEIGHT - 40, f"Lv.{self.level}")
             for x in range(self.columns):
                 for y in range(self.lines):
@@ -386,10 +382,18 @@ running = True
 k = 0
 while running:
     events = pygame.event.get()
-    game.events = events
     for event in events:
         if event.type == pygame.QUIT:
             running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT:
+                game.handle("left")
+            if event.key == pygame.K_RIGHT:
+                game.handle("right")
+            if event.key == pygame.K_DOWN:
+                game.handle("down")
+            if event.key == pygame.K_UP:
+                game.handle("rotate")
     k += 1
     bgChange(k)
     if k == maxk:
