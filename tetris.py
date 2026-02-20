@@ -217,7 +217,12 @@ class Tetromino:
             self.down()
         elif self.isPlaying: #s'il était en jeu, alors on fait apparaître un nouveau tetromino
             self.isPlaying = False
-            self.game.score += self.game.evaluate()
+            score, comp = self.game.evaluate()
+            self.game.score += score
+            self.game.completed += comp
+            if self.game.completed >= self.game.level * 10:
+                self.game.completed = 0
+                self.game.level += 1
             self.game.spawn()
         self.move(0,0) #ceci va simplement ajouter la pièce telle qu'elle est dans la matrice
 
@@ -236,6 +241,7 @@ class Tetris:
         self.board = [[-1]*self.lines for i in range(self.columns)] #matrice de taille C*L qui caractérise le plateau de jeu (colonnes x lignes et pas l'inverse (pour visualiser (O,x,y) en base directe))
         self.playing = None #pièce qu'on joue
         self.score = 0
+        self.completed = 0
         self.screen = screen
         self.frameclock = 0
         self.hiddennext = self.randomizeNext()
@@ -328,7 +334,7 @@ class Tetris:
             score += 200
         if amount == 2:
             score += 100
-        return score
+        return score, amount
 
 
     def setLevel(self, level):
@@ -437,7 +443,12 @@ class Automaton:
         Création d'un faux joueur
         """
         self.game = game
+        self.clear()
+
+    def clear(self):
         self.clock = 0
+        self.moves = []
+        self.tetro = self.game.playing
 
     def sim_fall(self, board):
         """
@@ -449,8 +460,17 @@ class Automaton:
         """
         Renvoie un triplet (left,right,rotate) simulant une action depuis un état
         """
+        pass
+
+    def simulate(self):
+        """
+        Fonction synthèse de l'algorithme, renvoit un tableau de couples (mouvement, ymin) à faire pour une pièce donnée (ymin est donné pour attendre d'être à une certaine hauteur avant de faire le mouvement)
+        """
+        pass
 
     def update(self):
+        if self.tetro != self.game.playing:
+            self.clear()
         self.clock += 1
         if self.clock == 60:
 
