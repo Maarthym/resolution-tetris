@@ -84,19 +84,17 @@ def T(level):
     G = gravity(level)
     return math.ceil(1/G)
 
-boardWidth = 6*WIDTH//10
+boardWidth = 11*WIDTH//20
 boardHeight = boardWidth * L//C
 slotSize = boardWidth//C
 slotBorder = slotSize // 7
 
-xBoard = (WIDTH - boardWidth)//2
+xBoard = 1*(WIDTH - boardWidth)//6
 yBoard = (HEIGHT - boardHeight)//2 + 10
 
 font = pygame.font.Font(None, 36)
 
-def drawSlot(screen, posx, posy, color):
-    x = xBoard + posx * slotSize # j -> column -> x-axis
-    y = yBoard + posy * slotSize # i -> line -> y-axis
+def drawRawSlot(screen, x,y,color):
     pygame.draw.rect(screen, color, (x,y,slotSize,slotSize))
     (r,g,b) = color
     contrast = 65
@@ -111,6 +109,11 @@ def drawSlot(screen, posx, posy, color):
     pygame.draw.rect(screen, colorb, (x,y,slotBorder,slotSize))
     pygame.draw.rect(screen, colorb, (x+slotSize-slotBorder,y,slotBorder,slotSize))
     pygame.draw.rect(screen, colorb, (x,y+slotSize-slotBorder,slotSize,slotBorder))
+
+def drawSlot(screen, posx, posy, color):
+    x = xBoard + posx * slotSize # j -> column -> x-axis
+    y = yBoard + posy * slotSize # i -> line -> y-axis
+    drawRawSlot(screen,x,y,color)
 
 def drawText(screen, x,y,t,c=(255,255,255)):
     text = font.render(t, True, c)
@@ -214,7 +217,7 @@ class Tetromino:
             self.down()
         elif self.isPlaying: #s'il était en jeu, alors on fait apparaître un nouveau tetromino
             self.isPlaying = False
-            self.game.evaluate()
+            self.game.score += self.game.evaluate()
             self.game.spawn()
         self.move(0,0) #ceci va simplement ajouter la pièce telle qu'elle est dans la matrice
 
@@ -235,7 +238,8 @@ class Tetris:
         self.score = 0
         self.screen = screen
         self.frameclock = 0
-        self.next = self.randomizeNext()
+        self.hiddennext = self.randomizeNext()
+        self.next = [self.hiddennext.pop() for _ in range(5)]
         self.spawn()
         self.ongoing = True
 
@@ -246,8 +250,15 @@ class Tetris:
         if self.playing != None:
             self.playing.update()
         tetroType = self.next.pop()
-        if self.next == []:
-            self.next =self.randomizeNext()
+        self.next.append(self.hiddennext.pop())
+        n=len(self.next)
+        temp = self.next[n-1]
+        for i in range(n):
+            tempb = self.next[i]
+            self.next[i] = temp
+            temp = tempb
+        if self.hiddennext == []:
+            self.hiddennext =self.randomizeNext()
         nc = len(COLOR)
         col = random.randint(0,nc-1) # on modélise la couleur par un entier qui est son indice dans le tableau COLOR
         tetro = None
@@ -307,8 +318,18 @@ class Tetris:
                     if tetro.type[dx][dy] == 1:
                         if tetro.y + dy + c in todel:
                             tetro.type[dx][dy] = 0
-            tetro.update()
-        self.score += 200*amount  #score simplifié
+        for i in range(amount):
+            for tetro in self.tetros:
+                tetro.update()
+        score = 200*amount  #score simplifié
+        if amount == 4:
+            score += 400
+        if amount == 3:
+            score += 200
+        if amount == 2:
+            score += 100
+        return score
+
 
     def setLevel(self, level):
         self.level = level
@@ -346,10 +367,10 @@ class Tetris:
         """
         Mise à jour calculée à chaque image
         """
-        drawTextXCentered(self.screen, WIDTH//2, 10, f"Score : {self.score}")
+        drawTextXCentered(self.screen, xBoard + boardWidth//2, 20, f"Score : {self.score}")
         if self.ongoing:
             self.incrClock()
-            drawText(self.screen, 10, HEIGHT - 40, f"Lv.{self.level}")
+            drawTextXCentered(self.screen, xBoard + boardWidth//2, HEIGHT - 30, f"Lv.{self.level}")
             for x in range(self.columns):
                 for y in range(self.lines):
                     p = self.board[x][y]
@@ -360,8 +381,21 @@ class Tetris:
                             drawSlot(screen, x, y, (88,88,88))
                         else:
                             drawSlot(screen, x, y, (80,80,80))
+            diff = WIDTH - (xBoard + boardWidth)
+            xpos = (WIDTH-diff) - (diff-WIDTH)//4
+            drawTextXCentered(self.screen, xpos, 20, f"Next:")
+            dy = 10+ 3*slotSize
+            n = len(self.next)
+            for k in range(n):
+                tetroType = self.next[n-1-k]
+                for x in range(len(tetroType)):
+                    for y in range(len(tetroType)):
+                        c = len(tetroType)//2
+                        if tetroType[x][y] == 1:
+                            drawRawSlot(screen, xpos -slotSize + (x-c)*slotSize, dy + (y-c)*slotSize, COLOR[k])
+                dy += 5 + 3*slotSize
         else:
-            drawTextXCentered(self.screen, WIDTH//2, HEIGHT//2, f"You Lost")
+            drawTextXCentered(self.screen, xBoard + boardWidth//2, HEIGHT//2, f"You Lost")
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 game = Tetris(C, L, LEVEL, screen)
@@ -399,18 +433,33 @@ class Automaton:
     Algorithme qui s'occupe de jouer et tenter de maximiser le score
     """
     def __init__(self, game):
+        """
+        Création d'un faux joueur
+        """
         self.game = game
         self.clock = 0
+
+    def sim_fall(self, board):
+        """
+        Renvoie un couple (tableau, tours) simulant la chute du tetromino contrôlé et renvoyant le nombre de pixel le séparant de sa chute
+        """
+        pass
+
+    def sim_moves(self, board):
+        """
+        Renvoie un triplet (left,right,rotate) simulant une action depuis un état
+        """
 
     def update(self):
         self.clock += 1
         if self.clock == 60:
+
             self.clock = 0
             self.game.handle(random.choice(["left", "right", "rotate","down"]))
 
 
 running = True
-autoplay = True
+autoplay = False
 automaton = Automaton(game)
 k = 0
 while running:
